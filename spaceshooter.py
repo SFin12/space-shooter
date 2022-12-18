@@ -1,6 +1,5 @@
 import pygame
 import os
-import time
 import random
 pygame.font.init()
 pygame.mixer.init()
@@ -40,7 +39,7 @@ SHIELD_RECHARGE = pygame.mixer.Sound('assets/shield-charge.wav')
 SHIELD_RECHARGE.set_volume(0.5)
 CHANNEL_2 = pygame.mixer.Channel(2)
 NEXT_LEVEL = pygame.mixer.Sound('assets/next-level.wav')
-NEXT_LEVEL.set_volume(0.3)
+NEXT_LEVEL.set_volume(0.4)
 CHANNEL_2.play(NEXT_LEVEL)
 
 
@@ -70,6 +69,8 @@ class Laser:
 class Ship:
     COOLDOWN  = 12
     def __init__(self, x, y, health = 100):
+        self.starting_x = x
+        self.stargin_y = y
         self.x = x
         self.y = y
         self.health = health
@@ -139,7 +140,6 @@ class Player(Ship):
         self.cooldown()
         for laser in self.lasers:
             laser.move(vel)
-            
             if laser.off_screen(HEIGHT):
                 self.lasers.remove(laser)
                 self.total_shots += 1
@@ -180,7 +180,6 @@ class Player(Ship):
     def getAccuracy(self):
         if not self.kills or not self.total_shots:
             return 0
-        
         return round((self.kills / self.total_shots) * 100)
 
 class Enemy(Ship):
@@ -223,22 +222,16 @@ class Power_up(Ship):
                 }
     def __init__(self, x, y, type, health = 100):
         super().__init__(x,y, health)
+        
         self.ship_img, self.laser_img = self.TYPE_MAP[type]
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.type = type
 
     def move(self, vel):
-        self.y += vel
-        if self.x < 500:
-            self.x += vel
-        if self.x > WIDTH - 500:
-            self.x -= vel
-    
-
-
-
-
-
+      if self.starting_x < 0:
+        self.x += vel
+      if self.starting_x >= WIDTH:
+        self.x -= vel
 class Collision:
     EXPLOSION_TIME = 15
 
@@ -281,22 +274,26 @@ def main():
     laser_on = False
     wave_length = 6
     player = Player(300, 550)
-    kills = player.getKills()
-    accuracy = player.getAccuracy()
     player_vel = 15
     laser_vel = 20
     clock = pygame.time.Clock()
     lost = False
     lost_count = 0
+    kills = 0
+    accuracy = 0
 
     def redraw_window():
         nonlocal run
         WINDOW.blit(BG, (0,0))
         # draw text
+        nonlocal kills
+        nonlocal accuracy
+        kills = player.getKills()
+        accuracy = player.getAccuracy()
         lives_label = main_font.render(f"lives: {lives}", 1, (255,255,255))
         level_label = main_font.render(f"level: {level}", 1, (255,255,255))
-        kills_label = main_font.render(f"kills: {player.getKills()}", 1, (255,255,255))
-        accuracy_label = main_font.render(f"accuracy: {player.getAccuracy()}%", 1, (255,255,255))
+        kills_label = main_font.render(f"kills: {kills}", 1, (255,255,255))
+        accuracy_label = main_font.render(f"accuracy: {accuracy}%", 1, (255,255,255))
 
         WINDOW.blit(lives_label, (10,10))
         WINDOW.blit(accuracy_label, (300,10))
@@ -332,9 +329,6 @@ def main():
             player.reset_cooldown()
             laser_on = False
             
-        
-        
-
         redraw_window()
         
         # Every five levels
@@ -359,8 +353,10 @@ def main():
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(50, WIDTH-100), random.randrange(-1500, -100), random.choice(['red','blue', 'green']))
                 enemies.append(enemy)
-            for i in range(random.randrange(0, min(wave_length // 2, 5))):
-                power_up = Power_up(random.randrange(50, WIDTH-100), random.randrange(-1600, -100), random.choice(['shield','laser']))
+            # generates random power-ups. 20% accuracy allows a max of 5, 24 = max of 6...
+            for i in range(random.randrange(0, min(wave_length // 2, max(4, accuracy // 4)))):
+                # power_up = Power_up(random.randrange(50, WIDTH-100), random.randrange(-1600, -100), random.choice(['shield','laser']))
+                power_up = Power_up(random.choice([random.randrange(-1500, -100),random.randrange(WIDTH + 100, WIDTH + 1500)]), random.randrange(30, 700), random.choice(['shield','laser']))
                 power_ups.append(power_up)
 
         if lives == 1 or player.health == 10 or player_vel - level < 10:
@@ -403,10 +399,6 @@ def main():
             if e_collision_check.collide():
                 if not enemy.exploded:
                     player.health -= 10
-                
-                # explode_timer = 20
-                # explode_at.append(e_collision_check)
-                # enemies.remove(enemy)
                 enemy.explode()
             elif enemy.y + enemy.get_height() > HEIGHT:
                 lives -= 1
@@ -416,6 +408,7 @@ def main():
           power_up.move(power_up_vel)
           power_up.move_lasers(laser_vel, player)
           p_collision_check = Collision(power_up, player)
+          
           if p_collision_check.collide():
               SHIELD_RECHARGE.play()
               if power_up.type == 'shield':
@@ -429,7 +422,7 @@ def main():
                   player.decrease_cooldown()
                   player.decrease_cooldown()
                   power_ups.remove(power_up)
-          elif power_up.y + power_up.get_height() > HEIGHT:              
+          elif power_up.y + power_up.get_height() > HEIGHT or power_up.x > WIDTH + 1500 or power_up.x < -1500:              
               power_ups.remove(power_up)
             
         player.move_lasers(- laser_vel, enemies)
