@@ -38,9 +38,10 @@ EXPLOSION_SOUND = pygame.mixer.Sound('assets/explosion.wav')
 EXPLOSION_SOUND.set_volume(0.5)
 SHIELD_RECHARGE = pygame.mixer.Sound('assets/shield-charge.wav')
 SHIELD_RECHARGE.set_volume(0.5)
+CHANNEL_2 = pygame.mixer.Channel(2)
 NEXT_LEVEL = pygame.mixer.Sound('assets/next-level.wav')
 NEXT_LEVEL.set_volume(0.3)
-
+CHANNEL_2.play(NEXT_LEVEL)
 
 
 # background
@@ -64,7 +65,7 @@ class Laser:
         return not(self.y <= height and self.y >= 0)
 
     def collision(self, obj):
-        return collide(self, obj)
+        return Collision(self, obj).collide()
 
 class Ship:
     COOLDOWN  = 12
@@ -113,40 +114,57 @@ class Ship:
         return self.ship_img.get_height()
 
 class Player(Ship):
-    def __init__(self, x, y, health = 100):
+    
+    LASER_COLOR_MAP = {
+                'yellow': YELLOW_LASER,
+                'red': RED_LASER,
+                'green': GREEN_LASER,
+                'blue': BLUE_LASER
+                }
+    
+    def __init__(self, x, y, laser_color = "yellow", health = 100):
+        self.kills = 0
+        self.total_shots = 0
         super().__init__(x, y, health)
+        self.laser_color = laser_color
         self.ship_img = YELLOW_SPACE_SHIP
-        self.laser_img = YELLOW_LASER
+        self.laser_img = self.LASER_COLOR_MAP[self.laser_color]
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
+    
+    def set_laser_color(self, color):
+        self.laser_img = self.LASER_COLOR_MAP[color]
 
     def move_lasers(self, vel, objs):
         self.cooldown()
         for laser in self.lasers:
             laser.move(vel)
+            
             if laser.off_screen(HEIGHT):
                 self.lasers.remove(laser)
+                self.total_shots += 1
             else: 
                 for obj in objs:
                     if laser.collision(obj):
-                        
-                        EXPLOSION_SOUND.play()
-                        objs.remove(obj)
-                        
+                        self.total_shots += 1
+                        self.kills += 1
+                        obj.explode()
                         if laser in self.lasers:
-
                             self.lasers.remove(laser)
 
     def decrease_cooldown(self):
         if self.COOLDOWN > 4:
             self.COOLDOWN  -= 2
         else:
-            pass
+            self.COOLDOWN = 4
+        if self.COOLDOWN < 4 and self.COOLDOWN < 9:
+            self.set_laser_color('blue')
+        elif self.COOLDOWN == 4:
+            self.set_laser_color('red')
         
     def reset_cooldown(self):
         self.COOLDOWN  = Ship.COOLDOWN
-        
-    
+        self.set_laser_color('yellow')
 
     def draw(self, window):
         super().draw(window)
@@ -155,12 +173,21 @@ class Player(Ship):
     def healthbar(self, window):
         pygame.draw.rect(window, (255,0,0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width(), 10))
         pygame.draw.rect(window, (0,255,0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width()* (self.health/self.max_health), 10))
+    
+    def getKills(self):
+        return self.kills
+
+    def getAccuracy(self):
+        if not self.kills or not self.total_shots:
+            return 0
+        
+        return round((self.kills / self.total_shots) * 100)
 
 class Enemy(Ship):
+    EXPLODE_TIMER = 5
     COLOR_MAP = {
                 'red': (RED_SPACE_SHIP, RED_LASER),
-                # 'green': (GREEN_SPACE_SHIP, GREEN_LASER),
-                'green': (EXPLOSION, GREEN_LASER),
+                'green': (GREEN_SPACE_SHIP, GREEN_LASER),
                 'blue': (BLUE_SPACE_SHIP, BLUE_LASER)
                 }
     def __init__(self, x, y, color, health = 100):
@@ -168,6 +195,7 @@ class Enemy(Ship):
         self.ship_img, self.laser_img = self.COLOR_MAP[color]
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.color = color
+        self.exploded = False
 
     def move(self, vel):
         self.y += vel
@@ -184,7 +212,9 @@ class Enemy(Ship):
             self.cool_down_counter -= .5
     
     def explode(self):
+        EXPLOSION_SOUND.play()
         self.ship_img = EXPLOSION
+        self.exploded = True
 
 class Power_up(Ship):
     TYPE_MAP = {
@@ -199,24 +229,45 @@ class Power_up(Ship):
 
     def move(self, vel):
         self.y += vel
+        if self.x < 500:
+            self.x += vel
+        if self.x > WIDTH - 500:
+            self.x -= vel
     
 
 
 
 
-def collide(obj1, obj2):
-    offset_x = obj2.x - obj1.x
-    offset_y = obj2.y - obj1.y
-    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
 
-def explode(x,y, WINDOW):
-    WINDOW.blit(EXPLOSION, (x,y))
-    return
+class Collision:
+    EXPLOSION_TIME = 15
+
+    def __init__(self, obj1, obj2, img = EXPLOSION):
+        self.obj1 = obj1
+        self.obj2 = obj2
+        self.img = img
+        self.explosion_counter = 0 
+        self.mask = pygame.mask.from_surface(self.img)
+        self.collision_que = []
+
+    def collide(self):
+        offset_x = self.obj2.x - self.obj1.x
+        offset_y = self.obj2.y - self.obj1.y
+        self.collision_que.append(self.obj1)
+        return self.obj1.mask.overlap(self.obj2.mask, (offset_x, offset_y)) != None
+    
+    def explode(self, WINDOW):
+        return WINDOW.blit(self.img, (self.obj1.x, self.obj1.y))
+    
+    def explosion_countdown(self):
+        if self.explosion_counter >=  self.EXPLOSION_TIME:
+            self.explosion_counter = 0
+        elif self.explosion_counter < self.EXPLOSION_TIME:
+            self.explosion_counter += 1
 
 def main():
     run = True
     FPS = 60
-    
     level = 0
     level_indicator = level -1
     lives = 10
@@ -230,12 +281,11 @@ def main():
     laser_on = False
     wave_length = 6
     player = Player(300, 550)
+    kills = player.getKills()
+    accuracy = player.getAccuracy()
     player_vel = 15
     laser_vel = 20
-    explode_at = [] # takes in array of x, y coodinates to display explosion
-    explode_timer = 0
     clock = pygame.time.Clock()
-
     lost = False
     lost_count = 0
 
@@ -245,20 +295,23 @@ def main():
         # draw text
         lives_label = main_font.render(f"lives: {lives}", 1, (255,255,255))
         level_label = main_font.render(f"level: {level}", 1, (255,255,255))
+        kills_label = main_font.render(f"kills: {player.getKills()}", 1, (255,255,255))
+        accuracy_label = main_font.render(f"accuracy: {player.getAccuracy()}%", 1, (255,255,255))
 
         WINDOW.blit(lives_label, (10,10))
+        WINDOW.blit(accuracy_label, (300,10))
         WINDOW.blit(level_label, (WIDTH - level_label.get_width() - 10, 10))
+        WINDOW.blit(kills_label, (WIDTH - level_label.get_width() - 300, 10))
         
         for enemy in enemies:
             enemy.draw(WINDOW)
+            if enemy.exploded:
+                enemy.EXPLODE_TIMER -= 1
+            if enemy.EXPLODE_TIMER == 0:
+                enemies.remove(enemy)
         for power_up in power_ups:
             power_up.draw(WINDOW)
-        for explosion in explode_at:
-            if explode_timer:
-                x = explosion[0]
-                y = explosion[1]
-                print(x,y)
-                explode(x,y, WINDOW)
+        
 
         player.draw(WINDOW)
 
@@ -279,12 +332,15 @@ def main():
             player.reset_cooldown()
             laser_on = False
             
-        # Every five levels
-        if level_indicator % 5 == 0:
-            NEXT_LEVEL.play(0,500,1)
-            
+        
+        
+
         redraw_window()
         
+        # Every five levels
+        if level_indicator > 1 and level_indicator % 3 == 0:
+            CHANNEL_2.play(NEXT_LEVEL)  
+
         if lost == True:
             
             if lost_count > 60:
@@ -311,7 +367,8 @@ def main():
             player_vel  = 18
 
         if level_indicator > 2:
-            Ship.COOLDOWN -= 1
+            if level_indicator // 4 == 0 and Ship.COOLDOWN > 8:
+              Ship.COOLDOWN -= 1
             if player_vel < 18:
                 player_vel += 1
             level_indicator = 1
@@ -336,19 +393,21 @@ def main():
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
             enemy.move_lasers(laser_vel, player)
-
+            e_collision_check = Collision(enemy, player)
             if enemy.color == 'red' and random.randrange(0, 40) == 1:
                 enemy.shoot()
             if enemy.color == 'green' and random.randrange(0, 80) == 1:
                 enemy.shoot()
             if enemy.color == 'blue' and random.randrange(0, 120) == 1:
                 enemy.shoot()
-            if collide(enemy, player):
-                player.health -= 10
-                EXPLOSION_SOUND.play()
-                explode_timer = 20
-                explode_at.append([enemy.x, enemy.y])
-                enemies.remove(enemy)
+            if e_collision_check.collide():
+                if not enemy.exploded:
+                    player.health -= 10
+                
+                # explode_timer = 20
+                # explode_at.append(e_collision_check)
+                # enemies.remove(enemy)
+                enemy.explode()
             elif enemy.y + enemy.get_height() > HEIGHT:
                 lives -= 1
                 enemies.remove(enemy)
@@ -356,7 +415,8 @@ def main():
         for power_up in power_ups[:]:
           power_up.move(power_up_vel)
           power_up.move_lasers(laser_vel, player)
-          if collide(power_up, player):
+          p_collision_check = Collision(power_up, player)
+          if p_collision_check.collide():
               SHIELD_RECHARGE.play()
               if power_up.type == 'shield':
                   player.health = 100
@@ -365,6 +425,7 @@ def main():
               if power_up.type == 'laser':
                   laser_on = True
                   laser_timer = 600
+            
                   player.decrease_cooldown()
                   player.decrease_cooldown()
                   power_ups.remove(power_up)
@@ -384,7 +445,7 @@ def main_menu():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
                 main()
     pygame.quit()            
 
