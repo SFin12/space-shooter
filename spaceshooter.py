@@ -153,11 +153,12 @@ class Player(Ship):
                             self.lasers.remove(laser)
 
     def decrease_cooldown(self):
+        print("decreasing cooldown: ",self.COOLDOWN)
         if self.COOLDOWN > 4:
             self.COOLDOWN  -= 2
         else:
             self.COOLDOWN = 4
-        if self.COOLDOWN < 4 and self.COOLDOWN < 9:
+        if self.COOLDOWN > 4 and self.COOLDOWN < 9:
             self.set_laser_color('blue')
         elif self.COOLDOWN == 4:
             self.set_laser_color('red')
@@ -273,7 +274,7 @@ def main():
     laser_timer = 0
     laser_on = False
     wave_length = 6
-    player = Player(300, 550)
+    player = Player(WIDTH/2, 650)
     player_vel = 15
     laser_vel = 20
     clock = pygame.time.Clock()
@@ -332,7 +333,7 @@ def main():
         redraw_window()
         
         # Every five levels
-        if level_indicator > 1 and level_indicator % 3 == 0:
+        if level > 2 and level_indicator % 3 == 0:
             CHANNEL_2.play(NEXT_LEVEL)  
 
         if lost == True:
@@ -365,6 +366,7 @@ def main():
         if level_indicator > 2:
             if level_indicator // 4 == 0 and Ship.COOLDOWN > 8:
               Ship.COOLDOWN -= 1
+              print(Ship.COOLDOWN)
             if player_vel < 18:
                 player_vel += 1
             level_indicator = 1
@@ -417,7 +419,7 @@ def main():
                   power_ups.remove(power_up)
               if power_up.type == 'laser':
                   laser_on = True
-                  laser_timer = 600
+                  laser_timer = 500
             
                   player.decrease_cooldown()
                   player.decrease_cooldown()
