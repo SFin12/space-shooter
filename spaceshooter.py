@@ -288,7 +288,7 @@ def main():
     player_1 = Player(WIDTH/2, 650)
     player_2 = None
     player_vel = 15
-    laser_vel = 20
+    laser_vel = 22
     clock = pygame.time.Clock()
     lost = False
     lost_count = 0
@@ -327,7 +327,7 @@ def main():
         
 
         player_1.draw(WINDOW)
-        # player_2.draw(WINDOW)
+        
 
         if lost:
             lost_label = lost_font.render("You Lost!!", 1, (255,255,255))
