@@ -3,6 +3,15 @@ import os
 import random
 pygame.font.init()
 pygame.mixer.init()
+pygame.joystick.init()
+CONTROLLERS = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]
+CONTROLLER_1 = None
+CONTROLLER_2 = None
+if len(CONTROLLERS):
+    CONTROLLER_1 = CONTROLLERS[0]
+if len(CONTROLLERS) > 1:
+    CONTROLLER_2 = CONTROLLERS[1]
+
 WIDTH, HEIGHT = 1600, 1000
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Space Shooter')
@@ -14,6 +23,7 @@ BLUE_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_blue_smal
 
 # Player ship
 YELLOW_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_yellow.png'))
+ORANGE_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_orange.png'))
 
 # Power Ups
 SHIELD_GENERATOR = pygame.image.load(os.path.join('assets', 'pixel_shield.png'))
@@ -70,7 +80,7 @@ class Ship:
     COOLDOWN  = 12
     def __init__(self, x, y, health = 100):
         self.starting_x = x
-        self.stargin_y = y
+        self.starting_y = y
         self.x = x
         self.y = y
         self.health = health
@@ -123,12 +133,12 @@ class Player(Ship):
                 'blue': BLUE_LASER
                 }
     
-    def __init__(self, x, y, laser_color = "yellow", health = 100):
+    def __init__(self, x, y, laser_color = "yellow", health = 100, player = 1):
         self.kills = 0
         self.total_shots = 0
         super().__init__(x, y, health)
         self.laser_color = laser_color
-        self.ship_img = YELLOW_SPACE_SHIP
+        self.ship_img = ORANGE_SPACE_SHIP
         self.laser_img = self.LASER_COLOR_MAP[self.laser_color]
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
@@ -184,6 +194,7 @@ class Player(Ship):
         return round((self.kills / self.total_shots) * 100)
 
 class Enemy(Ship):
+
     EXPLODE_TIMER = 5
     COLOR_MAP = {
                 'red': (RED_SPACE_SHIP, RED_LASER),
@@ -209,7 +220,7 @@ class Enemy(Ship):
             laser = Laser(self.x-15, self.y, self.laser_img)
             ENEMY_LASER.play()
             self.lasers.append(laser)
-            self.cool_down_counter -= .5
+            self.cool_down_counter = 1
     
     def explode(self):
         EXPLOSION_SOUND.play()
@@ -274,7 +285,8 @@ def main():
     laser_timer = 0
     laser_on = False
     wave_length = 6
-    player = Player(WIDTH/2, 650)
+    player_1 = Player(WIDTH/2, 650)
+    player_2 = None
     player_vel = 15
     laser_vel = 20
     clock = pygame.time.Clock()
@@ -282,6 +294,9 @@ def main():
     lost_count = 0
     kills = 0
     accuracy = 0
+    shoot_slow = 0
+    if CONTROLLER_2:
+        player_2 = Player(WIDTH/4, 550, "yellow", 100, 2)
 
     def redraw_window():
         nonlocal run
@@ -289,8 +304,8 @@ def main():
         # draw text
         nonlocal kills
         nonlocal accuracy
-        kills = player.getKills()
-        accuracy = player.getAccuracy()
+        kills = player_1.getKills()
+        accuracy = player_1.getAccuracy()
         lives_label = main_font.render(f"lives: {lives}", 1, (255,255,255))
         level_label = main_font.render(f"level: {level}", 1, (255,255,255))
         kills_label = main_font.render(f"kills: {kills}", 1, (255,255,255))
@@ -311,12 +326,13 @@ def main():
             power_up.draw(WINDOW)
         
 
-        player.draw(WINDOW)
+        player_1.draw(WINDOW)
+        # player_2.draw(WINDOW)
 
         if lost:
             lost_label = lost_font.render("You Lost!!", 1, (255,255,255))
             WINDOW.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, HEIGHT/2))
-            if lost_count > FPS * 5:
+            if lost_count > FPS * 30:
                 run = False
 
         pygame.display.update()
@@ -327,7 +343,7 @@ def main():
         if laser_on and laser_timer > 0:
             laser_timer -= 1
         if laser_on and laser_timer < 1:
-            player.reset_cooldown()
+            player_1.reset_cooldown()
             laser_on = False
             
         redraw_window()
@@ -340,7 +356,7 @@ def main():
             
             if lost_count > 60:
                 run = False
-        if lives <= 0 or player.health <= 0:
+        if lives <= 0 or player_1.health <= 0:
             lost = True
             lost_count += 1
 
@@ -353,20 +369,19 @@ def main():
             # generates random enemy ships
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(50, WIDTH-100), random.randrange(-1500, -100), random.choice(['red','blue', 'green']))
+
                 enemies.append(enemy)
             # generates random power-ups. 20% accuracy allows a max of 5, 24 = max of 6...
             for i in range(random.randrange(0, min(wave_length // 2, max(4, accuracy // 4)))):
-                # power_up = Power_up(random.randrange(50, WIDTH-100), random.randrange(-1600, -100), random.choice(['shield','laser']))
                 power_up = Power_up(random.choice([random.randrange(-1500, -100),random.randrange(WIDTH + 100, WIDTH + 1500)]), random.randrange(30, 700), random.choice(['shield','laser']))
                 power_ups.append(power_up)
 
-        if lives == 1 or player.health == 10 or player_vel - level < 10:
+        if lives == 1 or player_1.health == 10 or player_vel - level < 10:
             player_vel  = 18
 
         if level_indicator > 2:
             if level_indicator // 4 == 0 and Ship.COOLDOWN > 8:
-              Ship.COOLDOWN -= 1
-              print(Ship.COOLDOWN)
+                Ship.COOLDOWN -= 1
             if player_vel < 18:
                 player_vel += 1
             level_indicator = 1
@@ -374,33 +389,62 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+        
+        if CONTROLLER_1:
+            # get x axis of first analog stick
+            if abs(CONTROLLER_1.get_axis(0)) > .2: 
+                
+                x_vel = CONTROLLER_1.get_axis(0) * player_vel
+                if  player_1.x - player_vel > 0 and x_vel < 0:
+                    player_1.x += x_vel
+                if player_1.x + player_1.get_width() + player_vel < WIDTH and x_vel > 0:
+                    player_1.x += x_vel
+            # get y axis of first analog stick        
+            if abs(CONTROLLER_1.get_axis(1)) > .2:
+                y_vel = CONTROLLER_1.get_axis(1) * player_vel 
+                if  player_1.y - player_vel > 0 and y_vel < 0:
+                    player_1.y += y_vel
+                if player_1.y + player_1.get_height() + player_vel + 12 < HEIGHT and y_vel > 0:
+                    player_1.y += y_vel
+                
+            
+            if CONTROLLER_1.get_axis(5) >= .2 and CONTROLLER_1.get_axis(5) < .7:
+                if shoot_slow:
+                    shoot_slow -= 1
+                else:
+                    player_1.shoot()
+                    shoot_slow = 10
+            if CONTROLLER_1.get_axis(5) >= .8:
+                player_1.shoot()
 
         # says what happens when specific keys are pressed.
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and player.x - player_vel > 0: #left
-            player.x -= player_vel
-        if keys[pygame.K_RIGHT] and player.x + player.get_width() + player_vel < WIDTH: #right
-            player.x += player_vel
-        if keys[pygame.K_UP] and player.y - 50 - player_vel > 0: #up
-            player.y -= player_vel
-        if keys[pygame.K_DOWN] and player.y + player.get_height() + player_vel + 10 < HEIGHT: #down
-            player.y += player_vel
+        if keys[pygame.K_ESCAPE]:
+            run = False
+        if keys[pygame.K_LEFT] and player_1.x - player_vel > 0: #left
+            player_1.x -= player_vel
+        if keys[pygame.K_RIGHT] and player_1.x + player_1.get_width() + player_vel < WIDTH: #right
+            player_1.x += player_vel
+        if keys[pygame.K_UP] and player_1.y - 50 - player_vel > 0: #up
+            player_1.y -= player_vel
+        if keys[pygame.K_DOWN] and player_1.y + player_1.get_height() + player_vel + 12 < HEIGHT: #down
+            player_1.y += player_vel
         if keys[pygame.K_SPACE]:
-            player.shoot()
-        
+            player_1.shoot()
+
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
-            enemy.move_lasers(laser_vel, player)
-            e_collision_check = Collision(enemy, player)
-            if enemy.color == 'red' and random.randrange(0, 40) == 1:
+            enemy.move_lasers(laser_vel, player_1)
+            e_collision_check = Collision(enemy, player_1)
+            if enemy.color == 'red' and random.randrange(0, 200) == 1:
                 enemy.shoot()
-            if enemy.color == 'green' and random.randrange(0, 80) == 1:
+            if enemy.color == 'green' and random.randrange(0, 400) == 1:
                 enemy.shoot()
-            if enemy.color == 'blue' and random.randrange(0, 120) == 1:
+            if enemy.color == 'blue' and random.randrange(0, 500) == 1:
                 enemy.shoot()
             if e_collision_check.collide():
                 if not enemy.exploded:
-                    player.health -= 10
+                    player_1.health -= 10
                 enemy.explode()
             elif enemy.y + enemy.get_height() > HEIGHT:
                 lives -= 1
@@ -408,26 +452,26 @@ def main():
 
         for power_up in power_ups[:]:
           power_up.move(power_up_vel)
-          power_up.move_lasers(laser_vel, player)
-          p_collision_check = Collision(power_up, player)
+          power_up.move_lasers(laser_vel, player_1)
+          p_collision_check = Collision(power_up, player_1)
           
           if p_collision_check.collide():
               SHIELD_RECHARGE.play()
               if power_up.type == 'shield':
-                  player.health = 100
+                  player_1.health = 100
                   lives += 1
                   power_ups.remove(power_up)
               if power_up.type == 'laser':
                   laser_on = True
                   laser_timer = 500
             
-                  player.decrease_cooldown()
-                  player.decrease_cooldown()
+                  player_1.decrease_cooldown()
+                  player_1.decrease_cooldown()
                   power_ups.remove(power_up)
           elif power_up.y + power_up.get_height() > HEIGHT or power_up.x > WIDTH + 1500 or power_up.x < -1500:              
               power_ups.remove(power_up)
             
-        player.move_lasers(- laser_vel, enemies)
+        player_1.move_lasers(- laser_vel, enemies)
 
 def main_menu():
     title_font = pygame.font.SysFont("comicsans", 70)
@@ -440,7 +484,7 @@ def main_menu():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-            if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN or CONTROLLER_1 and CONTROLLER_1.get_axis(5) > .5:
                 main()
     pygame.quit()            
 
