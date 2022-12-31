@@ -353,6 +353,7 @@ def main():
     p1_shoot_slow = 0
 
     player_2 = None
+
     if CONTROLLER_2:
         player_2 = Player(WIDTH/2, 650, "orange", 100, 2)
         p2_laser_timer = 0
@@ -388,8 +389,10 @@ def main():
         
 
         player_1.draw(WINDOW)
+
         if player_2:
             player_2.draw(WINDOW)
+
 
         if lost:
             lost_label = message_font.render("You Lost!!", 1, (255,255,255))
