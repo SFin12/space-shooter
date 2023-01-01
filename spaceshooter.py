@@ -34,6 +34,8 @@ YELLOW_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_yellow.
 YELLOW_SPACE_SHIP_BURNER = pygame.image.load(os.path.join('assets', 'pixel_ship_yellow_burner.png'))
 ORANGE_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_orange.png'))
 ORANGE_SPACE_SHIP_BURNER = pygame.image.load(os.path.join('assets', 'pixel_ship_orange_burner.png'))
+ORANGE_SPACE_SHIP_SHIELD = pygame.image.load(os.path.join('assets', 'pixel_ship_orange_shield.png'))
+YELLOW_SPACE_SHIP_SHIELD = pygame.image.load(os.path.join('assets', 'pixel_ship_yellow_shield.png'))
 
 # Player Font Colors
 WHITE_FONT = (255, 255, 255)
@@ -490,7 +492,7 @@ def main():
 
         if player_1.shield_on and p1_shield_timer > 0:
             p1_shield_timer -= 1
-            # player_1.ship_img = YELLOW_SPACE_SHIP_BURNER
+            player_1.ship_img = YELLOW_SPACE_SHIP_SHIELD
         if player_1.shield_on and p1_shield_timer < 1:
             player_1.ship_img = YELLOW_SPACE_SHIP
             player_1.switch_shield()
@@ -498,9 +500,9 @@ def main():
         if player_2:
             if player_2.shield_on and p2_shield_timer > 0:
                 p2_shield_timer -= 1
-            # player_1.ship_img = YELLOW_SPACE_SHIP_BURNER
+            player_1.ship_img = ORANGE_SPACE_SHIP_SHIELD
             if player_2.shield_on and p2_shield_timer < 1:
-                player_2.ship_img = YELLOW_SPACE_SHIP
+                player_2.ship_img = ORANGE_SPACE_SHIP
                 player_2.switch_shield()
         
         redraw_window()
