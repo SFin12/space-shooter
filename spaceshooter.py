@@ -46,6 +46,7 @@ RED_FONT = (255,50,50)
 SHIELD_GENERATOR = pygame.image.load(os.path.join('assets', 'pixel_shield.png'))
 FAST_LASER = pygame.image.load(os.path.join('assets', 'laser-power-up.png'))
 SPEED_BOOST = pygame.image.load(os.path.join('assets', 'energy.png'))
+HEALTH_PACK = pygame.image.load(os.path.join('assets', 'health.png'))
 
 # Explosion
 EXPLOSION = pygame.image.load(os.path.join('assets', 'explosion-small.png'))
@@ -125,7 +126,8 @@ class Ship:
             if laser.off_screen(HEIGHT):
                 self.lasers.remove(laser)
             elif laser.collision(obj):
-                obj.health -= 5
+                if not obj.shield_on:
+                  obj.health -= 5
                 self.lasers.remove(laser)
 
     def cooldown(self):
@@ -161,6 +163,7 @@ class Player(Ship):
         self.kills = 0
         self.total_shots = 0
         self.speed = 15
+        self.shield_on = False
         super().__init__(x, y, health)
         if player == 1:
             self.ship_img = YELLOW_SPACE_SHIP
@@ -191,6 +194,8 @@ class Player(Ship):
                         if laser in self.lasers:
                             self.lasers.remove(laser)
 
+    def switch_shield(self):
+        self.shield_on = not self.shield_on
     def decrease_cooldown(self):
         if self.COOLDOWN > 4:
             self.COOLDOWN  -= 2
@@ -280,7 +285,8 @@ class Power_up(Ship):
     TYPE_MAP = {
                 'shield': (SHIELD_GENERATOR, BLUE_LASER),
                 'laser': (FAST_LASER, RED_LASER),
-                'speed': (SPEED_BOOST, RED_LASER)
+                'speed': (SPEED_BOOST, RED_LASER),
+                'health': (HEALTH_PACK, RED_LASER)
                 }
     def __init__(self, x, y, type, health = 100):
         super().__init__(x,y, health)
@@ -347,6 +353,7 @@ def main():
     p1_laser_on = False
     p1_speed_timer = 0
     p1_speed_on = False
+    p1_shield_timer = 0
     p1_player_vel = 13
     p1_kills = 0
     p1_accuracy = 0
@@ -360,6 +367,8 @@ def main():
         p2_laser_on = False
         p2_speed_timer = 0
         p2_speed_on = False
+     
+        p2_shield_timer = 0
         p2_player_vel = 13
         p2_kills = 0
         p2_accuracy = 0
@@ -478,6 +487,21 @@ def main():
                 player_2.ship_img = ORANGE_SPACE_SHIP
                 p2_player_vel -= 7
                 p2_speed_on = False
+
+        if player_1.shield_on and p1_shield_timer > 0:
+            p1_shield_timer -= 1
+            # player_1.ship_img = YELLOW_SPACE_SHIP_BURNER
+        if player_1.shield_on and p1_shield_timer < 1:
+            player_1.ship_img = YELLOW_SPACE_SHIP
+            player_1.switch_shield()
+
+        if player_2:
+            if player_2.shield_on and p2_shield_timer > 0:
+                p2_shield_timer -= 1
+            # player_1.ship_img = YELLOW_SPACE_SHIP_BURNER
+            if player_2.shield_on and p2_shield_timer < 1:
+                player_2.ship_img = YELLOW_SPACE_SHIP
+                player_2.switch_shield()
         
         redraw_window()
         
@@ -515,7 +539,7 @@ def main():
             if player_2:
                 combined_accuracy = (p1_accuracy + p2_accuracy / 1.5)
             for i in range(random.randrange(0, min(wave_length // 2, max(4, combined_accuracy // 4)))):
-                power_up = Power_up(random.choice([random.randrange(-1500, -100),random.randrange(WIDTH + 100, WIDTH + 1500)]), random.randrange(30, 700), random.choice(['shield','laser', 'speed']))
+                power_up = Power_up(random.choice([random.randrange(-1500, -100),random.randrange(WIDTH + 100, WIDTH + 1500)]), random.randrange(30, 700), random.choice(['shield','laser', 'speed', 'health']))
                 power_ups.append(power_up)
 
         if lives == 1 or player_1.health == 10 or p1_player_vel - level < 10:
@@ -617,15 +641,17 @@ def main():
             p1_collision_check = Collision(enemy, player_1)
             if p1_collision_check.collide():
                 if not enemy.exploded:
-                    player_1.health -= 15
-                enemy.explode()
+                    if not p1_shield_on:
+                      player_1.health -= 15
+                      enemy.explode()
             if player_2:
                 enemy.move_lasers(laser_vel, player_2)
                 p2_collision_check = Collision(enemy, player_2)
                 if p2_collision_check.collide():
                     if not enemy.exploded:
-                        player_2.health -= 15
-                        enemy.explode()
+                        if not p2_shield_on:
+                          player_2.health -= 15
+                          enemy.explode()
             if enemy.color == 'orange' and random.randrange(0, 50) == 1:
                 enemy.shoot()
             if enemy.color == 'red' and random.randrange(0, 200) == 1:
@@ -649,7 +675,7 @@ def main():
             p2_collision_check = Collision(power_up, player_2)
             if p2_collision_check.collide():
               SHIELD_RECHARGE.play()
-              if power_up.type == 'shield':
+              if power_up.type == 'health':
                   player_2.health = 100
                   lives += 1
                   power_ups.remove(power_up)
@@ -664,10 +690,14 @@ def main():
                   p2_speed_timer = 300
                   p2_player_vel += 7
                   power_ups.remove(power_up)
+              if power_up.type == 'shield':
+                  player_2.switch_shield()
+                  p2_shield_timer = 300
+                  power_ups.remove(power_up)
           p1_collision_check = Collision(power_up, player_1)
           if p1_collision_check.collide():
               SHIELD_RECHARGE.play()
-              if power_up.type == 'shield':
+              if power_up.type == 'health':
                   player_1.health = 100
                   lives += 1
                   power_ups.remove(power_up)
@@ -683,6 +713,11 @@ def main():
                   p1_speed_timer = 300
                   p1_player_vel += 7
                   power_ups.remove(power_up)
+              if power_up.type == 'shield':
+                  player_1.switch_shield()
+                  p1_shield_timer = 300
+                  power_ups.remove(power_up)
+              
           elif power_up.y + power_up.get_height() > HEIGHT or power_up.x > WIDTH + 1500 or power_up.x < -1500:              
               power_ups.remove(power_up)
             
