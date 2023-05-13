@@ -14,7 +14,7 @@ if len(CONTROLLERS) > 1:
     CONTROLLER_2 = CONTROLLERS[1]
 
 MONITOR_HEIGHT = pygame.display.Info().current_h
-WIDTH, HEIGHT = 1400, min(1200, MONITOR_HEIGHT)
+WIDTH, HEIGHT = 1400, min(1200, MONITOR_HEIGHT-100)
 
 if CONTROLLER_2:
     WIDTH = 1600
@@ -196,8 +196,12 @@ class Player(Ship):
                         if laser in self.lasers:
                             self.lasers.remove(laser)
 
-    def switch_shield(self):
-        self.shield_on = not self.shield_on
+    def turn_on_shield(self):
+        self.shield_on = True
+        
+    def turn_off_shield(self):
+        self.shield_on = False
+
     def decrease_cooldown(self):
         if self.COOLDOWN > 4:
             self.COOLDOWN  -= 2
@@ -478,7 +482,7 @@ def main():
             player_1.ship_img = YELLOW_SPACE_SHIP_BURNER
         if p1_speed_on and p1_speed_timer < 1:
             player_1.ship_img = YELLOW_SPACE_SHIP
-            p1_player_vel -= 7
+            p1_player_vel = 13
             p1_speed_on = False
 
         if player_2:
@@ -487,7 +491,7 @@ def main():
                 player_2.ship_img = ORANGE_SPACE_SHIP_BURNER
             if p2_speed_on and p2_speed_timer < 1:
                 player_2.ship_img = ORANGE_SPACE_SHIP
-                p2_player_vel -= 7
+                p2_player_vel = 13
                 p2_speed_on = False
 
         if player_1.shield_on and p1_shield_timer > 0:
@@ -495,15 +499,15 @@ def main():
             player_1.ship_img = YELLOW_SPACE_SHIP_SHIELD
         if player_1.shield_on and p1_shield_timer < 1:
             player_1.ship_img = YELLOW_SPACE_SHIP
-            player_1.switch_shield()
+            player_1.turn_off_shield()
 
         if player_2:
             if player_2.shield_on and p2_shield_timer > 0:
                 p2_shield_timer -= 1
-            player_1.ship_img = ORANGE_SPACE_SHIP_SHIELD
+                player_2.ship_img = ORANGE_SPACE_SHIP_SHIELD
             if player_2.shield_on and p2_shield_timer < 1:
                 player_2.ship_img = ORANGE_SPACE_SHIP
-                player_2.switch_shield()
+                player_2.turn_off_shield()
         
         redraw_window()
         
@@ -643,17 +647,17 @@ def main():
             p1_collision_check = Collision(enemy, player_1)
             if p1_collision_check.collide():
                 if not enemy.exploded:
-                    if not p1_shield_on:
+                    if not player_1.shield_on:
                       player_1.health -= 15
-                      enemy.explode()
+                    enemy.explode()
             if player_2:
                 enemy.move_lasers(laser_vel, player_2)
                 p2_collision_check = Collision(enemy, player_2)
                 if p2_collision_check.collide():
                     if not enemy.exploded:
-                        if not p2_shield_on:
+                        if not player_2.shield_on:
                           player_2.health -= 15
-                          enemy.explode()
+                        enemy.explode()
             if enemy.color == 'orange' and random.randrange(0, 50) == 1:
                 enemy.shoot()
             if enemy.color == 'red' and random.randrange(0, 200) == 1:
@@ -690,10 +694,10 @@ def main():
               if power_up.type == 'speed':
                   p2_speed_on = True
                   p2_speed_timer = 300
-                  p2_player_vel += 7
+                  p2_player_vel = 20
                   power_ups.remove(power_up)
               if power_up.type == 'shield':
-                  player_2.switch_shield()
+                  player_2.turn_on_shield()
                   p2_shield_timer = 300
                   power_ups.remove(power_up)
           p1_collision_check = Collision(power_up, player_1)
@@ -713,10 +717,10 @@ def main():
               if power_up.type == 'speed':
                   p1_speed_on = True
                   p1_speed_timer = 300
-                  p1_player_vel += 7
+                  p1_player_vel = 20
                   power_ups.remove(power_up)
               if power_up.type == 'shield':
-                  player_1.switch_shield()
+                  player_1.turn_on_shield()
                   p1_shield_timer = 300
                   power_ups.remove(power_up)
               
