@@ -1,6 +1,7 @@
 import pygame
 import os
 import random
+import threading
 pygame.font.init()
 pygame.mixer.init()
 pygame.joystick.init()
@@ -81,6 +82,8 @@ CHANNEL_2.play(NEXT_LEVEL)
 # background
 BG = pygame.transform.scale(pygame.image.load(os.path.join('assets', 'background-black-wide.png')),(WIDTH,HEIGHT))
 INFO_RECT = pygame.Rect(WIDTH, 0, 250, HEIGHT)
+
+
 
 
 class Laser:
@@ -333,6 +336,12 @@ class Collision:
             self.explosion_counter += 1
 
 def main():
+    # Get the height of the background image
+    BG_HEIGHT = BG.get_height()
+
+# Initialize the y-coordinates for the two background images
+    BG_Y1 = 0
+    BG_Y2 = -BG_HEIGHT  # Initially off the screen
     run = True
     FPS = 60
     clock = pygame.time.Clock()
@@ -353,7 +362,7 @@ def main():
     power_up_vel = 2
     wave_length = 11
     laser_vel = 20
-
+    scroll_speed = 1
     player_1 = Player(WIDTH/2, 650)
     p1_laser_timer = 0
     p1_laser_on = False
@@ -364,7 +373,7 @@ def main():
     p1_kills = 0
     p1_accuracy = 0
     p1_shoot_slow = 0
-
+    
     player_2 = None
 
     if CONTROLLER_2:
@@ -380,7 +389,10 @@ def main():
         p2_accuracy = 0
         p2_shoot_slow = 0
     
-    
+    def redraw_backround():
+        WINDOW.blit(BG, (0,BG_Y1))
+        WINDOW.blit(BG, (0,BG_Y2))
+
     def redraw_window():
         nonlocal run
         nonlocal p1_kills
@@ -390,9 +402,8 @@ def main():
         nonlocal warning_messages_current
         nonlocal warning_messages_current
         nonlocal message_timer
-
-        WINDOW.blit(BG, (0,0))
         
+
         for enemy in enemies:
             enemy.draw(WINDOW)
             if enemy.exploded:
@@ -460,10 +471,23 @@ def main():
 
 
         pygame.display.update()
-        
+    
+
 
     while run:
         clock.tick(FPS)
+        # Move the background images
+        BG_Y1 += scroll_speed
+        BG_Y2 += scroll_speed
+
+        # If the first BG image goes off the screen, reset its position
+        if BG_Y1 >= HEIGHT:
+            BG_Y1 = -BG_HEIGHT
+
+        # If the second BG image goes off the screen, reset its position
+        if BG_Y2 >= HEIGHT:
+            BG_Y2 = -BG_HEIGHT
+
         if p1_laser_on and p1_laser_timer > 0:
             p1_laser_timer -= 1
         if p1_laser_on and p1_laser_timer < 1:
@@ -509,8 +533,12 @@ def main():
                 player_2.ship_img = ORANGE_SPACE_SHIP
                 player_2.turn_off_shield()
         
-        redraw_window()
+        seperate_thread = threading.Thread(target=redraw_window)
+        seperate_thread.start()
+        seperate_thread.join()
         
+        background_thread = threading.Thread(target=redraw_backround)
+        background_thread.start()
         # Every five levels
         if level > 2 and level_indicator % 3 == 0:
             CHANNEL_2.play(NEXT_LEVEL)  
@@ -736,13 +764,16 @@ def main():
 
 def main_menu():
     title_font = pygame.font.SysFont("comicsans", 70)
+    directions_font = pygame.font.SysFont("comicsans", 50)
     # one_player = pygame.Rect(300,200,200,100)
     # two_player = pygame.Rect(WIDTH - 500,200,200,100)
     run = True
     while run:
         WINDOW.blit(BG, (0,0))
         title_label = title_font.render("Press the mouse to begin...", 1, (255,255,255))
+        directions = directions_font.render("Higher accuracy + levels = More upgrades!", 1, (250,250,250))
         WINDOW.blit(title_label, (WIDTH/2 - title_label.get_width()/2, 350))
+        WINDOW.blit(directions, (WIDTH/2 - directions.get_width()/2, 450))
         # ONE_PLAYER = pygame.draw.rect(WINDOW, (90,255,90), (one_player), border_radius=10)
         # TWO_PLAYER = None
         # if CONTROLLER_2:
