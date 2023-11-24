@@ -2,6 +2,7 @@ import pygame
 import os
 import random
 import threading
+import json
 pygame.font.init()
 pygame.mixer.init()
 pygame.joystick.init()
@@ -22,6 +23,10 @@ if CONTROLLER_2:
 
 WINDOW = pygame.display.set_mode((WIDTH + 250, HEIGHT))
 pygame.display.set_caption('Space Shooter')
+
+# general colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 # load images
 RED_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_red_small.png'))
@@ -335,7 +340,7 @@ class Collision:
         elif self.explosion_counter < self.EXPLOSION_TIME:
             self.explosion_counter += 1
 
-def main():
+def main(player_one_name, player_two_name = None):
     # Get the height of the background image
     BG_HEIGHT = BG.get_height()
 
@@ -364,6 +369,7 @@ def main():
     laser_vel = 20
     scroll_speed = 1
     player_1 = Player(WIDTH/2, 650)
+    p1_name = player_one_name
     p1_laser_timer = 0
     p1_laser_on = False
     p1_speed_timer = 0
@@ -373,16 +379,16 @@ def main():
     p1_kills = 0
     p1_accuracy = 0
     p1_shoot_slow = 0
-    
+    saved = False
     player_2 = None
 
     if CONTROLLER_2:
         player_2 = Player(WIDTH/2, 650, "orange", 100, 2)
+        p2_name = player_two_name
         p2_laser_timer = 0
         p2_laser_on = False
         p2_speed_timer = 0
         p2_speed_on = False
-     
         p2_shield_timer = 0
         p2_player_vel = 13
         p2_kills = 0
@@ -421,10 +427,13 @@ def main():
 
 
         if lost:
-            lost_label = message_font.render("You Lost!!", 1, (255,255,255))
+            lost_label = message_font.render("You Lost!", 1, (255,255,255))
             WINDOW.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, 300))
+           
             if lost_count > FPS * 30:
                 run = False
+                
+
 
         pygame.draw.rect(WINDOW, (10,10,10), INFO_RECT)
         
@@ -438,11 +447,11 @@ def main():
         # on screen text
         lives_label = main_font.render(f"Lives: {lives}", 1, (255,255,255))
         level_label = main_font.render(f"Level: {level}", 1, (255,255,255))
-        player_1_label = main_font.render(f"PLAYER 1", 1, YELLOW_FONT)
+        player_1_label = main_font.render(f"{p1_name}", 1, YELLOW_FONT)
         p1_kills_label = main_font.render(f"kills: {p1_kills}", 1, (255,255,255))
         p1_accuracy_label = main_font.render(f"accuracy: {p1_accuracy}%", 1, (255,255,255))
         if player_2:
-            player_2_label = main_font.render(f"PLAYER 2", 1, ORANGE_FONT)
+            player_2_label = main_font.render(f"{p2_name}", 1, ORANGE_FONT)
             p2_kills_label = main_font.render(f"kills: {p2_kills}", 1, (255,255,255))
             p2_accuracy_label = main_font.render(f"accuracy: {p2_accuracy}%", 1, (255,255,255))
 
@@ -544,9 +553,35 @@ def main():
             CHANNEL_2.play(NEXT_LEVEL)  
 
         if lost == True:
+            if not saved:
+                records = read_json('records.json')
+                records["games"].append({"name":p1_name, "level": level, "kills": p1_kills, "accuracy": p1_accuracy})
+                if(p1_accuracy > records["best_accuracy"]["accuracy"]):
+                    records["best_accuracy"] = {"name": p1_name, "accuracy": p1_accuracy, "level": level}
+                if(p1_kills > records["most_kills"]["kills"]):
+                    records["most_kills"] = {"name": p1_name, "kills": p1_kills, "level": level}
+                if(level > records["highest_level"]["level"]):
+                    if(player_2):
+                        records["highest_level"] = {"name": f"{p1_name} & {p2_name}", "level": level, "kills": p1_kills + p2_kills, "accuracy": (p1_accuracy + p2_accuracy) / 2}
+                    records["highest_level"] = {"name": p1_name, "level": level, "kills": p1_kills, "accuracy": p1_accuracy}
+                if player_2:
+                    records["games"].append({"game": records["games"].length + 1, "level": level, "p2_kills": p2_kills, "p2_accuracy": p2_accuracy})
+                    if(p2_accuracy > records["best_accuracy"]["accuracy"]):
+                        records["best_accuracy"] = {"name": p2_name, "accuracy": p2_accuracy, "level": level}
+                    if(p2_kills > records["most_kills"]["kills"]):
+                        records["most_kills"] = {"name": p2_name, "kills": p2_kills, "level": level}
+                write_json('records.json', records)
+                saved = True
+                print(records)
+                
             enemies = []
             if lost_count > FPS * 20:
+                
                 run = False
+                    
+                # save and close json file
+
+                # end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy, p2_kills)
             elif lost_count == 2:
                 CHANNEL_2.play(NEXT_LEVEL) 
         if lives <= 0 or player_1.health  <= 0 or player_2 and player_2.health <=0:
@@ -760,8 +795,6 @@ def main():
             player_2.move_lasers(- laser_vel, enemies)
 
 
-
-
 def main_menu():
     title_font = pygame.font.SysFont("comicsans", 70)
     directions_font = pygame.font.SysFont("comicsans", 50)
@@ -784,14 +817,79 @@ def main_menu():
             if event.type == pygame.QUIT:
                 run = False
             if event.type == pygame.MOUSEBUTTONDOWN  or event.type == pygame.KEYDOWN or CONTROLLER_1 and CONTROLLER_1.get_axis(5) > .5:
-                main()
+                player_one_name = get_player_name(1)
+                player_two_name = get_player_name(2)  # Comment this out if two player mode is not needed.
+                main(player_one_name, player_two_name)  # Modify your main function to accept these names as parameters.
                 # if event.button == 1:
                 #     if ONE_PLAYER.collidepoint(event.pos):
                 #         main()
                 #     if TWO_PLAYER and TWO_PLAYER.collidepoint(event.pos):
                 #         pass
                 
-    pygame.quit()            
+    pygame.quit()  
 
+
+def get_player_name(player_number):
+    font = pygame.font.SysFont("comicsans", 50)
+    input_box = pygame.Rect(WIDTH / 2 - 100, HEIGHT / 2, 200, 50)
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    active = False
+    text = ''
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return None
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # If the user clicked on the input_box rect.
+                if input_box.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+                color = color_active if active else color_inactive
+            if event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_RETURN:
+                        return text
+                    elif event.key == pygame.K_BACKSPACE:
+                        text = text[:-1]
+                    else:
+                        text += event.unicode
+
+        WINDOW.fill((30, 30, 30))
+        txt_surface = font.render(text, True, color)
+        width = max(200, txt_surface.get_width()+10)
+        input_box.w = width
+        WINDOW.blit(txt_surface, (input_box.x+5, input_box.y+5))
+        pygame.draw.rect(WINDOW, color, input_box, 2)
+
+        instruction = font.render(f"Enter Player {player_number} Name:", True, (255, 255, 255))
+        WINDOW.blit(instruction, (WIDTH / 2 - instruction.get_width() / 2, HEIGHT / 2 - 100))
+        
+        pygame.display.flip()          
+
+def end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy, p2_kills):
+    # Initialize text input variables
+    input_text = ""
+    regular_font = pygame.font.Font(None, 36)
+    input_rect = pygame.Rect(50, 50, 300, 50)
+    active = False
+    pygame.draw.rect(WINDOW, BLACK, input_rect, 2)
+    text_surface = regular_font.render(input_text, True, BLACK)
+    WINDOW.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
+    pygame.display.flip()  
+
+def read_json(file_name):
+    try:
+        with open(file_name, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}  # Return an empty dictionary if the file does not exist
+
+def write_json(file_name, data):
+    with open(file_name, 'w') as file:
+        json.dump(data, file, indent=4)
 
 main_menu()

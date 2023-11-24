@@ -1,6 +1,39 @@
 {
-  "accuracy": "15%",
-  "kills": "100",
-  "level": "10",
-  "name": "John Doe"
+    "games": [
+        {
+            "game": 0,
+            "name": "John Doe",
+            "level": 10,
+            "kills": 50,
+            "accuracy": 15
+        },
+        {
+            "name": "sean",
+            "level": 2,
+            "kills": 7,
+            "accuracy": 39
+        },
+        {
+            "name": "sean",
+            "level": 11,
+            "kills": 132,
+            "accuracy": 38
+        }
+    ],
+    "best_accuracy": {
+        "name": "sean",
+        "accuracy": 38,
+        "level": 11
+    },
+    "most_kills": {
+        "name": "sean",
+        "kills": 132,
+        "level": 11
+    },
+    "highest_level": {
+        "name": "sean",
+        "level": 11,
+        "kills": 132,
+        "accuracy": 38
+    }
 }
