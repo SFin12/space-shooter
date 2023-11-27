@@ -1,3 +1,4 @@
+from collections import namedtuple
 import pygame
 import os
 import random
@@ -381,6 +382,9 @@ def main(player_one_name, player_two_name = None):
     p1_shoot_slow = 0
     saved = False
     player_2 = None
+    p2_kills = None
+    p2_accuracy = None
+    p2_shoot_slow = None
 
     if CONTROLLER_2:
         player_2 = Player(WIDTH/2, 650, "orange", 100, 2)
@@ -430,7 +434,7 @@ def main(player_one_name, player_two_name = None):
             lost_label = message_font.render("You Lost!", 1, (255,255,255))
             WINDOW.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, 300))
            
-            if lost_count > FPS * 30:
+            if lost_count > FPS * 20:
                 run = False
                 
 
@@ -565,19 +569,19 @@ def main(player_one_name, player_two_name = None):
                         records["highest_level"] = {"name": f"{p1_name} & {p2_name}", "level": level, "kills": p1_kills + p2_kills, "accuracy": (p1_accuracy + p2_accuracy) / 2}
                     records["highest_level"] = {"name": p1_name, "level": level, "kills": p1_kills, "accuracy": p1_accuracy}
                 if player_2:
-                    records["games"].append({"game": records["games"].length + 1, "level": level, "p2_kills": p2_kills, "p2_accuracy": p2_accuracy})
+                    records["games"].append({"game": len(records["games"]) + 1, "level": level, "p2_kills": p2_kills, "p2_accuracy": p2_accuracy})
                     if(p2_accuracy > records["best_accuracy"]["accuracy"]):
                         records["best_accuracy"] = {"name": p2_name, "accuracy": p2_accuracy, "level": level}
                     if(p2_kills > records["most_kills"]["kills"]):
                         records["most_kills"] = {"name": p2_name, "kills": p2_kills, "level": level}
                 write_json('records.json', records)
                 saved = True
-                print(records)
+                
                 
             enemies = []
-            if lost_count > FPS * 20:
-                
+            if lost_count > FPS * 5:
                 run = False
+                end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy, p2_kills)
                     
                 # save and close json file
 
@@ -796,23 +800,26 @@ def main(player_one_name, player_two_name = None):
 
 
 def main_menu():
+    FPS = 60
     title_font = pygame.font.SysFont("comicsans", 70)
     directions_font = pygame.font.SysFont("comicsans", 50)
     # one_player = pygame.Rect(300,200,200,100)
     # two_player = pygame.Rect(WIDTH - 500,200,200,100)
     run = True
+    clock = pygame.time.Clock()
+    print("main menu")
     while run:
+        clock.tick(FPS)
+        
         WINDOW.blit(BG, (0,0))
         title_label = title_font.render("Press the mouse to begin...", 1, (255,255,255))
         directions = directions_font.render("Higher accuracy + levels = More upgrades!", 1, (250,250,250))
         WINDOW.blit(title_label, (WIDTH/2 - title_label.get_width()/2, 350))
         WINDOW.blit(directions, (WIDTH/2 - directions.get_width()/2, 450))
-        # ONE_PLAYER = pygame.draw.rect(WINDOW, (90,255,90), (one_player), border_radius=10)
-        # TWO_PLAYER = None
-        # if CONTROLLER_2:
-        #     TWO_PLAYER = pygame.draw.rect(WINDOW, (90,255,90), (two_player), border_radius=10)
-            
+    
         pygame.display.update()
+        # Wait at least 2 seconds before accepting input events
+        pygame.time.delay(2000)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -830,7 +837,7 @@ def main_menu():
 
 
 def get_player_name(player_number):
-    font = pygame.font.SysFont("comicsans", 50)
+    font = pygame.font.SysFont("comicsans", 40)
     input_box = pygame.Rect(WIDTH / 2 - 100, HEIGHT / 2, 200, 50)
     color_inactive = pygame.Color('lightskyblue3')
     color_active = pygame.Color('dodgerblue2')
@@ -870,16 +877,58 @@ def get_player_name(player_number):
         
         pygame.display.flip()          
 
-def end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy, p2_kills):
-    # Initialize text input variables
-    input_text = ""
-    regular_font = pygame.font.Font(None, 36)
-    input_rect = pygame.Rect(50, 50, 300, 50)
-    active = False
-    pygame.draw.rect(WINDOW, BLACK, input_rect, 2)
-    text_surface = regular_font.render(input_text, True, BLACK)
-    WINDOW.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
-    pygame.display.flip()  
+def end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy = None, p2_kills = None):
+  run = True
+  stats_font = pygame.font.SysFont("comicsans", 25)
+  print("end game screen")
+  # Display stats from json file and current game here
+  # First, display stats from current game for player 1 for 5 seconds
+  p1_accuracy_text = f"Player 1 Accuracy: {p1_accuracy}%"
+  p1_kills_text = f"Player 1 Kills: {p1_kills}"
+  if( p2_accuracy and p2_kills):
+    p2_accuracy_text = f"Player 2 Accuracy: {p2_accuracy}%"
+    p2_kills_text = f"Player 2 Kills: {p2_kills}"
+  level_text = f"Level: {level}"
+  # Display high scores from json file for 10 seconds
+  records = read_json('records.json')
+  high_scores_text = "High Scores:"
+  best_accuracy_text = f"Best Accuracy: {records['best_accuracy']['name']} - {records['best_accuracy']['accuracy']}%"
+  most_kills_text = f"Most Kills: {records['most_kills']['name']} - {records['most_kills']['kills']}"
+  highest_level_text = f"Highest Level: {records['highest_level']['name']} - {records['highest_level']['level']}"
+  # Display the player's stats for 5 seconds
+  while run:
+      WINDOW.blit(BG, (0,0))
+      # Display player 1 stats
+      p1_accuracy_label = stats_font.render(p1_accuracy_text, 1, (255,255,255))
+      p1_kills_label = stats_font.render(p1_kills_text, 1, (255,255,255))
+      WINDOW.blit(p1_accuracy_label, (WIDTH/2 - p1_accuracy_label.get_width()/2, 100))
+      WINDOW.blit(p1_kills_label, (WIDTH/2 - p1_kills_label.get_width()/2, 150))
+      # Display player 2 stats
+      if(p2_accuracy and p2_kills):
+        p2_accuracy_label = stats_font.render(p2_accuracy_text, 1, (255,255,255))
+        p2_kills_label = stats_font.render(p2_kills_text, 1, (255,255,255))
+        WINDOW.blit(p2_accuracy_label, (WIDTH/2 - p2_accuracy_label.get_width()/2, 200))
+        WINDOW.blit(p2_kills_label, (WIDTH/2 - p2_kills_label.get_width()/2, 250))
+      # Display level
+      level_label = stats_font.render(level_text, 1, (255,255,255))
+      WINDOW.blit(level_label, (WIDTH/2 - level_label.get_width()/2, 300))
+      # Display high scores
+      high_scores_label = stats_font.render(high_scores_text, 1, (255,255,255))
+      WINDOW.blit(high_scores_label, (WIDTH/2 - high_scores_label.get_width()/2, 400))
+      best_accuracy_label = stats_font.render(best_accuracy_text, 1, (255,255,255))
+      WINDOW.blit(best_accuracy_label, (WIDTH/2 - best_accuracy_label.get_width()/2, 450))
+      most_kills_label = stats_font.render(most_kills_text, 1, (255,255,255))
+      WINDOW.blit(most_kills_label, (WIDTH/2 - most_kills_label.get_width()/2, 500))
+      highest_level_label = stats_font.render(highest_level_text, 1, (255,255,255))
+      WINDOW.blit(highest_level_label, (WIDTH/2 - highest_level_label.get_width()/2, 550))
+      pygame.display.update()
+
+      # On mouse down or enter return to main menu
+      for event in pygame.event.get():
+          if event.type == pygame.QUIT:
+              run = False
+          if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
+              main_menu()
 
 def read_json(file_name):
     try:

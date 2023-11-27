@@ -18,6 +18,54 @@
             "level": 11,
             "kills": 132,
             "accuracy": 38
+        },
+        {
+            "name": "sean",
+            "level": 1,
+            "kills": 5,
+            "accuracy": 24
+        },
+        {
+            "name": "sean 2",
+            "level": 2,
+            "kills": 8,
+            "accuracy": 15
+        },
+        {
+            "name": "test",
+            "level": 2,
+            "kills": 6,
+            "accuracy": 33
+        },
+        {
+            "name": "test",
+            "level": 1,
+            "kills": 3,
+            "accuracy": 38
+        },
+        {
+            "name": "test",
+            "level": 1,
+            "kills": 2,
+            "accuracy": 29
+        },
+        {
+            "name": "test",
+            "level": 1,
+            "kills": 1,
+            "accuracy": 8
+        },
+        {
+            "name": "sean",
+            "level": 2,
+            "kills": 1,
+            "accuracy": 14
+        },
+        {
+            "game": 11,
+            "level": 2,
+            "p2_kills": 1,
+            "p2_accuracy": 7
         }
     ],
     "best_accuracy": {
