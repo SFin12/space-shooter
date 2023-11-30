@@ -28,12 +28,20 @@ pygame.display.set_caption('Space Shooter')
 # general colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+YELLOW = (225,188,41)
+ORANGE = (255, 119, 43)
 
-# load images
+# load enemy ships
 RED_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_red_small.png'))
 GREEN_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_green_small.png'))
 BLUE_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_blue_small.png'))
 ORANGE_ENEMY_SPACE_SHIP = pygame.image.load(os.path.join('assets', 'pixel_ship_orange_medium.png'))
+
+# load boss ships
+BOSS_1_DAMAGE_0 = pygame.image.load(os.path.join('assets/special_ships', 'boss_1_damage_0.png'))
+BOSS_1_DAMAGE_1 = pygame.image.load(os.path.join('assets/special_ships', 'boss_1_damage_1.png'))
+BOSS_1_DAMAGE_2 = pygame.image.load(os.path.join('assets/special_ships', 'boss_1_damage_2.png'))
+BOSS_1_DAMAGE_3 = pygame.image.load(os.path.join('assets/special_ships', 'boss_1_damage_3.png'))
 
 
 # Player shipS
@@ -81,6 +89,7 @@ SHIELD_RECHARGE = pygame.mixer.Sound('assets/shield-charge.wav')
 SHIELD_RECHARGE.set_volume(0.4)
 CHANNEL_2 = pygame.mixer.Channel(2)
 NEXT_LEVEL = pygame.mixer.Sound('assets/next-level.wav')
+MUSIC_LIST = ['battle_theme.mp3', 'end_theme.mp3']
 NEXT_LEVEL.set_volume(0.4)
 CHANNEL_2.play(NEXT_LEVEL)
 
@@ -110,7 +119,9 @@ class Laser:
         return not(self.y <= height and self.y >= 0)
 
     def collision(self, obj):
-        return Collision(self, obj).collide()
+        colide = Collision(self, obj).collide()
+        
+        return colide
 
 class Ship:
     COOLDOWN  = 12
@@ -250,9 +261,12 @@ class Enemy(Ship):
                 'blue': (BLUE_SPACE_SHIP, BLUE_LASER),
                 'orange': (ORANGE_ENEMY_SPACE_SHIP, ORANGE_LASER)
                 }
-    def __init__(self, x, y, color, health = 100):
+    def __init__(self, x, y, color = None, health = 100):
         super().__init__(x,y, health)
-        self.ship_img, self.laser_img = self.COLOR_MAP[color]
+        if(color == None):
+            self.ship_img, self.laser_img = random.choice(list(self.COLOR_MAP.values()))
+        else:
+            self.ship_img, self.laser_img = self.COLOR_MAP[color]
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.color = color
         self.exploded = False
@@ -296,6 +310,78 @@ class Enemy(Ship):
         self.ship_img = EXPLOSION
         self.exploded = True
 
+class Boss(Enemy):
+    BOSS_LEVEL_MAP = {
+                1: (BOSS_1_DAMAGE_0, RED_LASER),
+                1.1: (BOSS_1_DAMAGE_1, RED_LASER),
+                1.2: (BOSS_1_DAMAGE_2, RED_LASER),
+                1.3: (BOSS_1_DAMAGE_3, RED_LASER),
+    }
+
+    def __init__(self, x, y, boss_level, health=100):
+        super().__init__(x, y, health=health)  # Initialize the Enemy class
+        self.ship_img, self.laser_img = self.BOSS_LEVEL_MAP[boss_level]
+        self.mask = pygame.mask.from_surface(self.ship_img)
+        self.original_bosss_level = boss_level
+        self.boss_level = boss_level
+        self.exploded = False
+        self.orginal_health = health
+        self.health = health
+        # You can add more boss-specific attributes here
+    def take_damage(self, amount):
+        self.health -= amount
+        self.check_health()
+
+    def explode(self):
+        # override the explode method
+        EXPLOSION_SOUND.play()
+        self.take_damage(10)
+
+    def check_health(self):
+        if self.health == self.orginal_health:
+            self.boss_level = self.boss_level
+            self.ship_img, self.laser_img = self.BOSS_LEVEL_MAP[self.boss_level]
+        elif self.health > self.orginal_health * .5:
+            self.boss_level = round(self.original_bosss_level + .1, 1)
+            self.ship_img, self.laser_img = self.BOSS_LEVEL_MAP[self.boss_level]
+
+
+        elif self.health > self.orginal_health * .3:
+       
+            self.boss_level = round(self.original_bosss_level + .2, 1)
+            self.ship_img, self.laser_img = self.BOSS_LEVEL_MAP[self.boss_level]
+        elif self.health > 0:
+            if(self.boss_level < 1.3):
+              self.boss_level = round(self.original_bosss_level + .3, 1)
+            self.ship_img, self.laser_img = self.BOSS_LEVEL_MAP[self.boss_level]
+        else:
+            self.ship_img = EXPLOSION
+            
+
+    def move(self, vel):
+        self.y += vel
+        if self.boss_level >= 1 and self.boss_level < 2:
+            self.y -= .5
+            if self.x < WIDTH - self.get_width() and self.x > 0:
+                
+                if self.ZIG_ZAG_TIMER < 100:
+                    self.x += random.randint(2,5)
+                    self.ZIG_ZAG_TIMER += 1
+                elif self.ZIG_ZAG_TIMER < 200:
+                    self.x -= random.randint(2,5)
+                    self.ZIG_ZAG_TIMER += 1
+                else:
+                    self.ZIG_ZAG_TIMER = 0
+            elif self.x >= WIDTH - self.get_width():
+                self.x -= 5
+                self.ZIG_ZAG_TIMER = 100
+            elif self.x < 0:
+                self.x += 5
+                self.ZIG_ZAG_TIMER = 0
+
+    # Override or extend additional methods as needed
+
+
 class Power_up(Ship):
     TYPE_MAP = {
                 'shield': (SHIELD_GENERATOR, BLUE_LASER),
@@ -330,7 +416,7 @@ class Collision:
         offset_x = self.obj2.x - self.obj1.x
         offset_y = self.obj2.y - self.obj1.y
         self.collision_que.append(self.obj1)
-        return self.obj1.mask.overlap(self.obj2.mask, (offset_x, offset_y)) != None
+        return self.obj1.mask.overlap(self.obj2.mask, (offset_x, offset_y)) != None # returns true if there is a collision
     
     def explode(self, WINDOW):
         return WINDOW.blit(self.img, (self.obj1.x, self.obj1.y))
@@ -363,6 +449,7 @@ def main(player_one_name, player_two_name = None):
     message_timer = 150
     line_height = 50
     enemies = []
+    bosses = []
     enemy_vel = 1
     power_ups = []
     power_up_vel = 2
@@ -413,6 +500,12 @@ def main(player_one_name, player_two_name = None):
         nonlocal warning_messages_current
         nonlocal message_timer
         
+        for boss in bosses:
+            boss.draw(WINDOW)
+            if boss.exploded:
+                boss.EXPLODE_TIMER -= 1
+            if boss.EXPLODE_TIMER == 0:
+                bosses.remove(boss)
 
         for enemy in enemies:
             enemy.draw(WINDOW)
@@ -420,6 +513,7 @@ def main(player_one_name, player_two_name = None):
                 enemy.EXPLODE_TIMER -= 1
             if enemy.EXPLODE_TIMER == 0:
                 enemies.remove(enemy)
+
         for power_up in power_ups:
             power_up.draw(WINDOW)
         
@@ -599,6 +693,12 @@ def main(player_one_name, player_two_name = None):
             wave_length += 1
             enemy_vel += .2
             
+            if level == 1:
+                boss = Boss(random.randrange(50, WIDTH-100), random.randrange(-1500, -100), 1 ) # use boss 1 for testing
+                bosses.append(boss)
+                # Possibly add a boss to enemies
+                wave_length -= 1
+
             # generates random enemy ships
             for i in range(wave_length):
                 if level > 6:
@@ -707,7 +807,55 @@ def main(player_one_name, player_two_name = None):
                 player_1.y += p1_player_vel
             if keys[pygame.K_SPACE]:
                 player_1.shoot()
-
+        
+        for boss in bosses[:]:
+            boss.move(enemy_vel)
+            boss.move_lasers(laser_vel, player_1)
+            p1_boss_collision_check = Collision(boss, player_1)
+            if p1_boss_collision_check.collide():
+                boss.explode()
+                if not boss.exploded:
+                    if not player_1.shield_on:
+                      player_1.health -= 15
+                      boss.take_damage(10)
+                    else:
+                      boss.take_damage(1)
+            if player_2:
+                boss.move_lasers(laser_vel, player_2)
+                p2_boss_collision_check = Collision(boss, player_2)
+                if p2_boss_collision_check.collide():
+                    if not boss.exploded:
+                        if not player_2.shield_on:
+                          player_2.health -= 15
+                          boss.take_damage(10)
+                        else:
+                          boss.take_damage(1)
+            if boss.boss_level > 2 and random.randrange(0, 40) == 1:
+                boss.shoot()
+            elif boss.boss_level > 1 and random.randrange(0, 50) == 1:
+                
+                boss.shoot()
+            elif random.randrange(0, 60) == 1:
+                boss.shoot()
+           
+            # if boss reaches bottom of screen, player loses life
+            if boss.y + boss.get_height() > HEIGHT:
+                lives -= 1
+                THUD_SOUND.play()
+                warning_messages.append({"message": f"{lives} lives left", "color": RED_FONT})
+                boss.ship_img = EXPLOSION
+                bosses.remove(boss)
+                
+            if boss.health <= 0:
+                bosses.remove(boss)
+                lives += 1
+                warning_messages.append({"message": f"{lives} lives left", "color": GREEN_FONT})
+                boss.explode()
+                boss.EXPLODE_TIMER = 5
+                boss.exploded = True
+                if boss.boss_level == 1.3:
+                    warning_messages.append({"message": f"BOSS DEFEATED!", "color": GREEN_FONT})
+                    
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
             enemy.move_lasers(laser_vel, player_1)
@@ -807,7 +955,15 @@ def main_menu():
     # two_player = pygame.Rect(WIDTH - 500,200,200,100)
     run = True
     clock = pygame.time.Clock()
-    print("main menu")
+  
+    pygame.mixer.music.set_volume(0.4)
+
+    for i, song in enumerate(MUSIC_LIST):
+        if i == 0:
+            pygame.mixer.music.load(f"assets/{song}")
+            pygame.mixer.music.play()
+        else:
+            pygame.mixer.music.queue(f"assets/{song}") 
     while run:
         clock.tick(FPS)
         
@@ -839,7 +995,8 @@ def main_menu():
 def get_player_name(player_number):
     font = pygame.font.SysFont("comicsans", 40)
     input_box = pygame.Rect(WIDTH / 2 - 100, HEIGHT / 2, 200, 50)
-    color_inactive = pygame.Color('lightskyblue3')
+    # color_inactive = pygame.Color('lightskyblue3')
+    color_inactive = pygame.Color(YELLOW)
     color_active = pygame.Color('dodgerblue2')
     color = color_inactive
     active = False
