@@ -211,8 +211,9 @@ class Player(Ship):
                 for obj in objs:
                     if laser.collision(obj):
                         self.total_shots += 1
-                        self.kills += 1
                         obj.explode()
+                        if obj.health <= 0 or not obj:
+                          self.kills += 1
                         if laser in self.lasers:
                             self.lasers.remove(laser)
 
@@ -261,7 +262,7 @@ class Enemy(Ship):
                 'blue': (BLUE_SPACE_SHIP, BLUE_LASER),
                 'orange': (ORANGE_ENEMY_SPACE_SHIP, ORANGE_LASER)
                 }
-    def __init__(self, x, y, color = None, health = 100):
+    def __init__(self, x, y, color = None, health = 5):
         super().__init__(x,y, health)
         if(color == None):
             self.ship_img, self.laser_img = random.choice(list(self.COLOR_MAP.values()))
@@ -307,6 +308,7 @@ class Enemy(Ship):
     
     def explode(self):
         EXPLOSION_SOUND.play()
+        self.health = 0
         self.ship_img = EXPLOSION
         self.exploded = True
 
@@ -334,6 +336,7 @@ class Boss(Enemy):
 
     def explode(self):
         # override the explode method
+        self.health = self.health
         EXPLOSION_SOUND.play()
         self.take_damage(10)
 
@@ -361,22 +364,22 @@ class Boss(Enemy):
     def move(self, vel):
         self.y += vel
         if self.boss_level >= 1 and self.boss_level < 2:
-            self.y -= .5
+            self.y -= .3
             if self.x < WIDTH - self.get_width() and self.x > 0:
                 
                 if self.ZIG_ZAG_TIMER < 100:
-                    self.x += random.randint(2,5)
-                    self.ZIG_ZAG_TIMER += 1
+                    self.x += random.randint(3,6)
+                    self.ZIG_ZAG_TIMER += .5
                 elif self.ZIG_ZAG_TIMER < 200:
-                    self.x -= random.randint(2,5)
-                    self.ZIG_ZAG_TIMER += 1
+                    self.x -= random.randint(3,6)
+                    self.ZIG_ZAG_TIMER += .5
                 else:
                     self.ZIG_ZAG_TIMER = 0
             elif self.x >= WIDTH - self.get_width():
-                self.x -= 5
+                self.x -= 6
                 self.ZIG_ZAG_TIMER = 100
             elif self.x < 0:
-                self.x += 5
+                self.x += 6
                 self.ZIG_ZAG_TIMER = 0
 
     # Override or extend additional methods as needed
@@ -813,7 +816,6 @@ def main(player_one_name, player_two_name = None):
             boss.move_lasers(laser_vel, player_1)
             p1_boss_collision_check = Collision(boss, player_1)
             if p1_boss_collision_check.collide():
-                boss.explode()
                 if not boss.exploded:
                     if not player_1.shield_on:
                       player_1.health -= 15
@@ -943,6 +945,7 @@ def main(player_one_name, player_two_name = None):
               power_ups.remove(power_up)
             
         player_1.move_lasers(- laser_vel, enemies)
+        player_1.move_lasers(- laser_vel, bosses)
         if player_2:
             player_2.move_lasers(- laser_vel, enemies)
 

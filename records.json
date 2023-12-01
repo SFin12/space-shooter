@@ -114,6 +114,18 @@
             "level": 1,
             "kills": 7,
             "accuracy": 27
+        },
+        {
+            "name": "f",
+            "level": 1,
+            "kills": 10,
+            "accuracy": 59
+        },
+        {
+            "name": null,
+            "level": 2,
+            "kills": 9,
+            "accuracy": 41
         }
     ],
     "best_accuracy": {
