@@ -89,7 +89,7 @@ SHIELD_RECHARGE = pygame.mixer.Sound('assets/shield-charge.wav')
 SHIELD_RECHARGE.set_volume(0.4)
 CHANNEL_2 = pygame.mixer.Channel(2)
 NEXT_LEVEL = pygame.mixer.Sound('assets/next-level.wav')
-MUSIC_LIST = ['battle_theme.mp3', 'end_theme.mp3']
+MUSIC_LIST = ['calm_theme.mp3','battle_theme.mp3', 'end_theme.mp3']
 NEXT_LEVEL.set_volume(0.4)
 CHANNEL_2.play(NEXT_LEVEL)
 
@@ -124,7 +124,7 @@ class Laser:
         return colide
 
 class Ship:
-    COOLDOWN  = 12
+    COOLDOWN  = 14
     def __init__(self, x, y, health = 100):
         self.starting_x = x
         self.starting_y = y
@@ -442,7 +442,7 @@ def main(player_one_name, player_two_name = None):
     clock = pygame.time.Clock()
     lost = False
     lost_count = 0
-    level = 0
+    level = 2
     level_indicator = level -1
     lives = 10
     main_font = pygame.font.SysFont('comicsans', 30)
@@ -475,6 +475,9 @@ def main(player_one_name, player_two_name = None):
     p2_kills = None
     p2_accuracy = None
     p2_shoot_slow = None
+
+    stop_music()
+    play_list(MUSIC_LIST)
 
     if CONTROLLER_2:
         player_2 = Player(WIDTH/2, 650, "orange", 100, 2)
@@ -530,7 +533,8 @@ def main(player_one_name, player_two_name = None):
         if lost:
             lost_label = message_font.render("You Lost!", 1, (255,255,255))
             WINDOW.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, 300))
-           
+            stop_music()
+            play_music('calm_theme.mp3')
             if lost_count > FPS * 20:
                 run = False
                 
@@ -657,14 +661,14 @@ def main(player_one_name, player_two_name = None):
             if not saved:
                 records = read_json('records.json')
                 records["games"].append({"name":p1_name, "level": level, "kills": p1_kills, "accuracy": p1_accuracy})
-                if(p1_accuracy > records["best_accuracy"]["accuracy"]):
+                if(p1_accuracy > records["best_accuracy"]["accuracy"] and level > 10):
                     records["best_accuracy"] = {"name": p1_name, "accuracy": p1_accuracy, "level": level}
                 if(p1_kills > records["most_kills"]["kills"]):
                     records["most_kills"] = {"name": p1_name, "kills": p1_kills, "level": level}
                 if(level > records["highest_level"]["level"]):
+                    records["highest_level"] = {"name": p1_name, "level": level, "kills": p1_kills, "accuracy": p1_accuracy}
                     if(player_2):
                         records["highest_level"] = {"name": f"{p1_name} & {p2_name}", "level": level, "kills": p1_kills + p2_kills, "accuracy": (p1_accuracy + p2_accuracy) / 2}
-                    records["highest_level"] = {"name": p1_name, "level": level, "kills": p1_kills, "accuracy": p1_accuracy}
                 if player_2:
                     records["games"].append({"game": len(records["games"]) + 1, "level": level, "p2_kills": p2_kills, "p2_accuracy": p2_accuracy})
                     if(p2_accuracy > records["best_accuracy"]["accuracy"]):
@@ -678,7 +682,7 @@ def main(player_one_name, player_two_name = None):
             enemies = []
             if lost_count > FPS * 5:
                 run = False
-                end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy, p2_kills)
+                end_game_screen(p1_name, p1_accuracy, p1_kills, level, p2_name, p2_accuracy, p2_kills)
                     
                 # save and close json file
 
@@ -689,18 +693,20 @@ def main(player_one_name, player_two_name = None):
             lost = True
             lost_count += 1
 
-        if len(enemies) == 0 and not lost:
+        if len(enemies) == 0 and not lost and len(bosses) == 0:
             level += 1
             warning_messages.append({"message": f"level: {level}", "color": GREEN_FONT})
             level_indicator +=1
             wave_length += 1
             enemy_vel += .2
             
-            if level == 1:
-                boss = Boss(random.randrange(50, WIDTH-100), random.randrange(-1500, -100), 1 ) # use boss 1 for testing
-                bosses.append(boss)
-                # Possibly add a boss to enemies
-                wave_length -= 1
+            if level % 5 == 0:
+                for i in range(round(int(level / 5))
+                               ):
+                    boss = Boss(random.randrange(50, WIDTH-100), random.randrange(-1500, -100), 1, 150) # use boss 1 for testing
+                    bosses.append(boss)
+                    # Possibly add a boss to enemies
+                    wave_length -= 1
 
             # generates random enemy ships
             for i in range(wave_length):
@@ -842,7 +848,7 @@ def main(player_one_name, player_two_name = None):
            
             # if boss reaches bottom of screen, player loses life
             if boss.y + boss.get_height() > HEIGHT:
-                lives -= 1
+                lives -= 2
                 THUD_SOUND.play()
                 warning_messages.append({"message": f"{lives} lives left", "color": RED_FONT})
                 boss.ship_img = EXPLOSION
@@ -853,7 +859,7 @@ def main(player_one_name, player_two_name = None):
                 lives += 1
                 warning_messages.append({"message": f"{lives} lives left", "color": GREEN_FONT})
                 boss.explode()
-                boss.EXPLODE_TIMER = 5
+                boss.EXPLODE_TIMER = 6
                 boss.exploded = True
                 if boss.boss_level == 1.3:
                     warning_messages.append({"message": f"BOSS DEFEATED!", "color": GREEN_FONT})
@@ -948,6 +954,7 @@ def main(player_one_name, player_two_name = None):
         player_1.move_lasers(- laser_vel, bosses)
         if player_2:
             player_2.move_lasers(- laser_vel, enemies)
+            player_2.move_lasers(- laser_vel, bosses)
 
 
 def main_menu():
@@ -961,12 +968,8 @@ def main_menu():
   
     pygame.mixer.music.set_volume(0.4)
 
-    for i, song in enumerate(MUSIC_LIST):
-        if i == 0:
-            pygame.mixer.music.load(f"assets/{song}")
-            pygame.mixer.music.play()
-        else:
-            pygame.mixer.music.queue(f"assets/{song}") 
+    play_music("calm_theme.mp3")
+
     while run:
         clock.tick(FPS)
         
@@ -1037,22 +1040,22 @@ def get_player_name(player_number):
         
         pygame.display.flip()          
 
-def end_game_screen(p1_accuracy, p1_kills, level, p2_accuracy = None, p2_kills = None):
+def end_game_screen(p1_name, p1_accuracy, p1_kills, level, p2_name, p2_accuracy = None, p2_kills = None):
   run = True
   stats_font = pygame.font.SysFont("comicsans", 25)
   print("end game screen")
   # Display stats from json file and current game here
   # First, display stats from current game for player 1 for 5 seconds
-  p1_accuracy_text = f"Player 1 Accuracy: {p1_accuracy}%"
-  p1_kills_text = f"Player 1 Kills: {p1_kills}"
+  p1_accuracy_text = f"{p1_name}'s Accuracy: {p1_accuracy}%"
+  p1_kills_text = f"{p1_name}'s Kills: {p1_kills}"
   if( p2_accuracy and p2_kills):
-    p2_accuracy_text = f"Player 2 Accuracy: {p2_accuracy}%"
-    p2_kills_text = f"Player 2 Kills: {p2_kills}"
+    p2_accuracy_text = f"{p2_name}'s Accuracy: {p2_accuracy}%"
+    p2_kills_text = f"{p2_name}'s Kills: {p2_kills}"
   level_text = f"Level: {level}"
   # Display high scores from json file for 10 seconds
   records = read_json('records.json')
   high_scores_text = "High Scores:"
-  best_accuracy_text = f"Best Accuracy: {records['best_accuracy']['name']} - {records['best_accuracy']['accuracy']}%"
+  best_accuracy_text = f"Best Accuracy: {records['best_accuracy']['name']} - {records['best_accuracy']['accuracy']}%  Level: {records['best_accuracy']['level']}"
   most_kills_text = f"Most Kills: {records['most_kills']['name']} - {records['most_kills']['kills']}"
   highest_level_text = f"Highest Level: {records['highest_level']['name']} - {records['highest_level']['level']}"
   # Display the player's stats for 5 seconds
@@ -1100,5 +1103,22 @@ def read_json(file_name):
 def write_json(file_name, data):
     with open(file_name, 'w') as file:
         json.dump(data, file, indent=4)
+
+# Function to play a song
+def play_music(song):
+    pygame.mixer.music.load(f"assets/{song}")
+    pygame.mixer.music.play()
+
+def play_list(song_list):
+    for i, song in enumerate(song_list):
+        if i == 0:
+            play_music(song)
+            
+        else:
+            pygame.mixer.music.queue(f"assets/{song}")
+
+# Function to stop the current song
+def stop_music():
+    pygame.mixer.music.stop()
 
 main_menu()

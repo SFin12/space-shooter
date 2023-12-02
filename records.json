@@ -8,140 +8,68 @@
             "accuracy": 15
         },
         {
-            "name": "sean",
-            "level": 2,
-            "kills": 7,
-            "accuracy": 39
-        },
-        {
-            "name": "sean",
-            "level": 11,
-            "kills": 132,
-            "accuracy": 38
-        },
-        {
-            "name": "sean",
-            "level": 1,
-            "kills": 5,
-            "accuracy": 24
-        },
-        {
-            "name": "sean 2",
-            "level": 2,
-            "kills": 8,
-            "accuracy": 15
-        },
-        {
-            "name": "test",
-            "level": 2,
-            "kills": 6,
-            "accuracy": 33
-        },
-        {
-            "name": "test",
-            "level": 1,
-            "kills": 3,
-            "accuracy": 38
-        },
-        {
-            "name": "test",
-            "level": 1,
-            "kills": 2,
+            "name": "Ronan",
+            "level": 5,
+            "kills": 34,
             "accuracy": 29
         },
         {
-            "name": "test",
-            "level": 1,
-            "kills": 1,
-            "accuracy": 8
+            "game": 3,
+            "level": 5,
+            "p2_kills": 30,
+            "p2_accuracy": 14
         },
         {
-            "name": "sean",
-            "level": 2,
-            "kills": 1,
-            "accuracy": 14
+            "name": "Ronan",
+            "level": 20,
+            "kills": 216,
+            "accuracy": 10
         },
         {
-            "game": 11,
-            "level": 2,
-            "p2_kills": 1,
-            "p2_accuracy": 7
+            "game": 5,
+            "level": 20,
+            "p2_kills": 189,
+            "p2_accuracy": 9
         },
         {
-            "name": "f",
-            "level": 1,
-            "kills": 13,
-            "accuracy": 72
+            "name": "Ronan",
+            "level": 5,
+            "kills": 29,
+            "accuracy": 19
         },
         {
-            "name": "f",
-            "level": 1,
-            "kills": 11,
-            "accuracy": 61
+            "game": 7,
+            "level": 5,
+            "p2_kills": 22,
+            "p2_accuracy": 17
         },
         {
-            "name": "f",
-            "level": 3,
-            "kills": 22,
-            "accuracy": 51
+            "name": "Ronan",
+            "level": 10,
+            "kills": 104,
+            "accuracy": 13
         },
         {
-            "name": "a",
-            "level": 1,
-            "kills": 3,
-            "accuracy": 50
-        },
-        {
-            "name": "f",
-            "level": 1,
-            "kills": 4,
-            "accuracy": 80
-        },
-        {
-            "name": "a",
-            "level": 2,
-            "kills": 18,
-            "accuracy": 78
-        },
-        {
-            "name": "a",
-            "level": 1,
-            "kills": 6,
-            "accuracy": 35
-        },
-        {
-            "name": "f",
-            "level": 1,
-            "kills": 7,
-            "accuracy": 27
-        },
-        {
-            "name": "f",
-            "level": 1,
-            "kills": 10,
-            "accuracy": 59
-        },
-        {
-            "name": null,
-            "level": 2,
-            "kills": 9,
-            "accuracy": 41
+            "game": 9,
+            "level": 10,
+            "p2_kills": 85,
+            "p2_accuracy": 22
         }
     ],
     "best_accuracy": {
-        "name": "f",
-        "accuracy": 80,
-        "level": 1
+        "name": "Dad",
+        "accuracy": 22,
+        "level": 10
     },
     "most_kills": {
-        "name": "sean",
-        "kills": 132,
-        "level": 11
+        "name": "Ronan",
+        "kills": 216,
+        "level": 20
     },
     "highest_level": {
-        "name": "sean",
-        "level": 11,
-        "kills": 132,
-        "accuracy": 38
+        "name": "Ronan and Donovan",
+        "level": 20,
+        "kills": 216,
+        "accuracy": 10
     }
 }
