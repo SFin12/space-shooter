@@ -124,7 +124,7 @@ class Laser:
         return colide
 
 class Ship:
-    COOLDOWN  = 14
+    COOLDOWN  = 18
     def __init__(self, x, y, health = 100):
         self.starting_x = x
         self.starting_y = y
@@ -726,14 +726,14 @@ def main(player_one_name, player_two_name = None):
 
         if lives == 1 or player_1.health == 10 or p1_player_vel - level < 10:
             if p1_player_vel < 19:
-                p1_player_vel += 2
+                p1_player_vel += 1
 
         if player_2 and lives == 1 or player_2 and player_2.health == 10 or player_2 and p2_player_vel - level < 10:
             if p1_player_vel < 19:
-                p2_player_vel += 2
+                p2_player_vel += 1
 
-        if level % 4 == 0:
-            if Ship.COOLDOWN > 8:
+        if level % 5 == 0:
+            if Ship.COOLDOWN > 9:
                 Ship.COOLDOWN -= 1
             if p1_player_vel < 18:
                 p1_player_vel += 1
@@ -906,7 +906,7 @@ def main(player_one_name, player_two_name = None):
               SHIELD_RECHARGE.play()
               if power_up.type == 'health':
                   player_2.health = 100
-                  lives += 1
+                  # lives += 1
                   power_ups.remove(power_up)
               if power_up.type == 'laser':
                   p2_laser_on = True

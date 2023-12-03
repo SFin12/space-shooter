@@ -54,6 +54,30 @@
             "level": 10,
             "p2_kills": 85,
             "p2_accuracy": 22
+        },
+        {
+            "name": "Ronan",
+            "level": 10,
+            "kills": 66,
+            "accuracy": 24
+        },
+        {
+            "game": 11,
+            "level": 10,
+            "p2_kills": 35,
+            "p2_accuracy": 13
+        },
+        {
+            "name": "Ronan",
+            "level": 25,
+            "kills": 273,
+            "accuracy": 16
+        },
+        {
+            "game": 13,
+            "level": 25,
+            "p2_kills": 220,
+            "p2_accuracy": 10
         }
     ],
     "best_accuracy": {
@@ -63,13 +87,13 @@
     },
     "most_kills": {
         "name": "Ronan",
-        "kills": 216,
-        "level": 20
+        "kills": 273,
+        "level": 25
     },
     "highest_level": {
-        "name": "Ronan and Donovan",
-        "level": 20,
-        "kills": 216,
-        "accuracy": 10
+        "name": "Ronan & Donovan",
+        "level": 25,
+        "kills": 493,
+        "accuracy": 13.0
     }
 }
